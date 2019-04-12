@@ -1,0 +1,1 @@
+blink: python3 /config/blink/blink.py {{videoFilename}}
