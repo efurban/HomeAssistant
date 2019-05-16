@@ -1,26 +1,20 @@
+
 '''
     File name: blink.py
     This code is based on Dullage's code: https://github.com/Dullage/Home-AssistantConfig/blob/master/python_scripts/blink.py
     Date last modified: @ 04/12/2019 9:55 AM
     Python Version: 3.7
 
-    This script downloads the lastest video clip from blink server for a specified camera (by name), without region issues.  
-    
+    This script downloads the lastest video clip from blink server for a specified camera (by name), without region issues.
+
     Usage: python blink.py [filename]
-            e.g: 
+            e.g:
                 - python blink.py
                 - python blink.py FrontDoor_2019_04_08_17_43.mp4
 
     * a) configure the User Variables: videoSavePath, secretsFileLocation, cameraName
-      b) configure required secret parameters 
-      c) filename defaults to BlinkVideo.mp4, if the script is ran without the filename arg 
-
-    How I am using it with nodered: 
-        1. Define a shell command in HA
-            blink: python3 /config/blink/blink.py {{videoFilename}}
-        2. in NodeRed: Door Open --> Delay 30 secs --> Use moment to generate a filename with the current timestamp --> call the shell command with the filename 
-                       --> send the video via telegram 
-    
+      b) configure required secret parameters
+      c) filename defaults to BlinkVideo.mp4, if the script is ran without the filename arg
 '''
 
 from requests import get, post
@@ -39,7 +33,7 @@ videoSavePath = "/config/www"
 secretsFileLocation = "/config"
 cameraName = "Front Door"
 
-goBackMinutes = 3 # Videos created before this many minutes ago will be ignored
+goBackMinutes = 2 # Videos created before this many minutes ago will be ignored
 waitTimeoutSeconds = 60 # How long to wait for a video before giving up
 
 """
@@ -102,22 +96,22 @@ since = (start - relativedelta(minutes=goBackMinutes)).strftime("%Y-%m-%dT%H:%M:
 while True:
 
     # Get a list of videos, assume page 0 has the most recent. Convert the JSON response to a dict.
+    #print ("https://rest-"+region+".immedia-semi.com/api/v2/videos/changed?since={0}&page=1".format(since))
+
     responseData = get(
-        #"https://rest-prde.immedia-semi.com/api/v2/videos/changed?since={0}&page=1".format(since),
-        "https://rest-"+region+".immedia-semi.com/api/v2/videos/changed?since={0}&page=1".format(since),
+        "https://rest-"+region+".immedia-semi.com/api/v1/accounts/10700/media/changed?since={0}&page=1".format(since),
         headers={"Host": "rest-prde.immedia-semi.com", "TOKEN-AUTH": token}
     ).json()
 
-    videos = responseData["videos"]
+    videos = responseData["media"]
 
     latestVideoUrl = None
     if len(videos) >= 1:
-        latestVideoUrl = videos[0]["address"]
+        latestVideoUrl = videos[0]["media"]
         for i in range(len(videos)):
-            camName = videos[i]["camera_name"]
-            # print(i, videos[i]["camera_name"])
+            camName = videos[i]["device_name"]
             if (camName == cameraName):
-                latestVideoUrl = videos[i]["address"]
+                latestVideoUrl = videos[i]["media"]
                 logging.debug(f'Found a video for camera {cameraName}')
 
                 break
@@ -144,5 +138,5 @@ if latestVideoUrl is not None:
     f = open(videoFullPath, "wb")
     f.write(response.content)
     f.close()
-    
+
     logging.debug(f"File saved: {videoFullPath}")
